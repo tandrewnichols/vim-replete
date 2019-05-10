@@ -1,20 +1,25 @@
 let s:types = exists('s:types') ? s:types : {}
 
-function! replete#byArg(cmd, completeTypes) abort
-  let s:types[ a:cmd ] = a:completeTypes
+function! replete#byArg(cmd, completeTypes, ...) abort
+  let s:types[ a:cmd ] = { 'types': a:completeTypes }
+  if a:0 > 0
+    let s:types[ a:cmd ].pattern = a:1
+  endif
   return 'customlist,replete#handleCompletion'
 endfunction
 
-function! replete#echoTypes() abort
-  echo s:types
-endfunction
+function! replete#handleCompletion(arg, line, pos) abort
+  let line = a:line
+  let parts = split(line, ' ')
+  let cmd = parts[0]
+  let rest = join(parts[1:], ' ')
+  if has_key(s:types[cmd], 'pattern')
+    let line = substitute(rest, s:types[cmd].pattern, '', 'g')
+  endif
 
-function! replete#handleCompletion(arg, line, pos)
-  let splitChar = replete#findSplitChar(a:line)
-  let words = replete#getWords(a:line, splitChar)
-  let cmd = words[0]
-  let args = words[1:]
-  let types = s:types[ cmd ]
+  let splitChar = replete#findSplitChar(line)
+  let args = replete#getWords(line, splitChar)
+  let types = s:types[ cmd ].types
   let type = types[ index(args, a:arg) ]
 
   try
